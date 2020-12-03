@@ -23,8 +23,11 @@
 
 package com.manicken;
 
-// all import is replaced by direct def. calls
+// all other import is replaced by direct def. calls
 
+import static processing.app.I18n.tr; // translate (multi language support)
+import com.manicken.CustomMenu;
+import com.manicken.Reflect;
 /**
  * 
  */
@@ -36,17 +39,18 @@ public class sketchAsBuildPath implements processing.app.tools.Tool {
 
 	processing.app.Editor editor;// for the plugin
 	processing.app.Sketch sketch;
+	CustomMenu customMenu = null;
+	//javax.swing.JMenu toolsMenu; // for the plugin, uses reflection to get
 	
 	String thisToolTitle = "Sketch As Build Path";
-	String thisToolMenuTitle = "(Activate/Deactivate)";
+	//String thisToolMenuTitle = "(Activate/Deactivate)";
 	
 	public String getMenuTitle() {// required by tool loader
-		return thisToolTitle + " " + thisToolMenuTitle;
+		return thisToolTitle;// + " " + thisToolMenuTitle;
 	}
 
 	public void init(processing.app.Editor editor) { // required by tool loader
 		this.editor = editor;
-		sketch = this.editor.getSketch();
 
 		// workaround to make sure that init is run after the Arduino IDE gui has loaded
 		// otherwise any System.out(will never be shown at the init phase) 
@@ -60,22 +64,10 @@ public class sketchAsBuildPath implements processing.app.tools.Tool {
 
 	/**
 	 *  required by tool loader (called when user presses the tools-"thisToolMenuTitle")
-	 *  this will toggle if used or not
+	 *  replaced by Custom Menu
 	 */
 	public void run() {
-		if (activated)
-		{
-			activated = false;
-			Deactivate();
-			System.out.println("!!!" + thisToolTitle + " Deactivated !!!");
-		}
-		else
-		{
-			activated = true;
-			Activate();
-			System.out.println("!!!" + thisToolTitle + " Activated !!!");
-		}
-		processing.app.PreferencesData.setBoolean("manicken.sketchAsBuildPath.activated", activated);
+
 	}
 
 	/**
@@ -83,8 +75,18 @@ public class sketchAsBuildPath implements processing.app.tools.Tool {
 	 */
 	private void init() {
 		System.out.println("\n*** starting " + thisToolTitle + " ***\n");
+		sketch = this.editor.getSketch(); // this must be here because in init(processing.app.Editor editor) it's not yet initiated
 
 		activated = processing.app.PreferencesData.getBoolean("manicken.sketchAsBuildPath.activated", activated); // default value is defined at top.
+
+		customMenu = new CustomMenu(this.editor, thisToolTitle, 
+				new javax.swing.JMenuItem[] {
+					 CustomMenu.Item("Activate", event -> Activate())
+					,CustomMenu.Item("Deactivate", event -> Deactivate())
+					,CustomMenu.Item("Clear Build", event -> ClearBuild(true))
+					//,CustomMenu.Item("Settings", event -> ShowSettingsDialog())
+				});
+			customMenu.Init(useSeparateExtensionsMainMenu);
 
 		if (activated == true)
 		{
@@ -99,38 +101,64 @@ public class sketchAsBuildPath implements processing.app.tools.Tool {
 		// using code from Arduino IDE src @ Sketch.java -> public File getBuildPath()
 		java.io.File buildPath = processing.app.BaseNoGui.absoluteFile(newBuildPath); 
 		
-		try { java.nio.file.Files.createDirectories(buildPath.toPath()); } catch (java.io.IOException ioe) { ioe.printStackTrace(); }
-		
-		// this field is that the compiler uses by sketch.getBuildPath()
-		ReflectSetField("buildPath", sketch, buildPath); 
+		try {
+			java.nio.file.Files.createDirectories(buildPath.toPath());
+			// this field is that the compiler uses by sketch.getBuildPath()
+			if (!Reflect.SetField("buildPath", sketch, buildPath))
+			{
+				System.err.println("\n!!!" + thisToolTitle + "NOT Activated !!!\n");
+				return;
+			}
+			//PreferencesData.set("build.path", newBuildPath); // never have to set this
+			System.out.println("\nbuild.path is set to: " + buildPath.toPath());
 
-		//PreferencesData.set("build.path", newBuildPath); // never have to set this
-		System.out.println("build.path is set to: " + buildPath.toPath());
+			System.out.println("    !!!" + thisToolTitle + " Activated !!!\n");
+
+			processing.app.PreferencesData.setBoolean("manicken.sketchAsBuildPath.activated", true);
+		}
+		catch (java.io.IOException ioe) {
+			ioe.printStackTrace();
+			System.err.println("\n!!!" + thisToolTitle + "NOT Deactivated !!!\n");
+		}
+		
+		
 	}
 
 	private void Deactivate()
 	{
+		ClearBuild(false); // 
 		// first set to null
-		ReflectSetField("buildPath", sketch, null); 
-		
+		if (!Reflect.SetField("buildPath", sketch, null))
+		{
+			System.err.println("\n!!!" + thisToolTitle + "NOT Deactivated !!!\n");
+			return;
+		}
 		// when the internal field is null this will reset to default
-		try { sketch.getBuildPath(); } catch (java.io.IOException ioe) { ioe.printStackTrace(); }
+		try { 
+			java.io.File buildPath = sketch.getBuildPath(); 
+			System.out.println("\nbuild.path is set to: " + buildPath.toPath());
+			System.out.println("    !!!" + thisToolTitle + " Deactivated !!!\n");
+
+			processing.app.PreferencesData.setBoolean("manicken.sketchAsBuildPath.activated", false);
+		} 
+		catch (java.io.IOException ioe) {
+			ioe.printStackTrace();
+			System.err.println("\n!!!" + thisToolTitle + "NOT Deactivated !!!\n");
+		}
 	}
 
-	/**
-	 * Reflect Set Field wrapper method
-	 */
-	public void ReflectSetField(String name, Object obj, Object value) {
+	private void ClearBuild(boolean recreateFolder)
+	{
 		try {
-			java.lang.reflect.Field f = obj.getClass().getDeclaredField(name);
-			f.setAccessible(true);
-			f.set(obj, value);
-
-		} catch (Exception e) {
-			System.err.println("****************************************");
-			System.err.println("************cannot reflect**************");
-			System.err.println("****************************************");
-			e.printStackTrace();
+			java.io.File buildPath = sketch.getBuildPath(); 
+			processing.app.helpers.FileUtils.recursiveDelete(buildPath);
+			if (recreateFolder)
+				java.nio.file.Files.createDirectories(buildPath.toPath());
+			System.err.println("\n!!! Build Is now clean\n");
+		}
+		catch (java.io.IOException ioe) {
+			ioe.printStackTrace();
+			System.err.println("\n!!!" + thisToolTitle + " Could not clean the build output !!!\n");
 		}
 	}
 }
