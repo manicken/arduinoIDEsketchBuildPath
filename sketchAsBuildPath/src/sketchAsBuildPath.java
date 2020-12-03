@@ -67,11 +67,13 @@ public class sketchAsBuildPath implements processing.app.tools.Tool {
 		{
 			activated = false;
 			Deactivate();
+			System.out.println("!!!" + thisToolTitle + " Deactivated !!!");
 		}
 		else
 		{
 			activated = true;
 			Activate();
+			System.out.println("!!!" + thisToolTitle + " Activated !!!");
 		}
 		processing.app.PreferencesData.setBoolean("manicken.sketchAsBuildPath.activated", activated);
 	}
@@ -80,7 +82,7 @@ public class sketchAsBuildPath implements processing.app.tools.Tool {
 	 * This is the code that runs after the Arduino IDE GUI has been loaded
 	 */
 	private void init() {
-		System.out.println("\n*** starting " + thisToolTitle + " ***");
+		System.out.println("\n*** starting " + thisToolTitle + " ***\n");
 
 		activated = processing.app.PreferencesData.getBoolean("manicken.sketchAsBuildPath.activated", activated); // default value is defined at top.
 
