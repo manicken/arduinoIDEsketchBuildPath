@@ -29,17 +29,17 @@ That have the following features
 * global (into sketchbook folder (defined in Arduino IDE - Preferenses):<br>
 &nbsp;&nbsp;make a new folder in the above defined sketchbook folder<br>
 &nbsp;&nbsp;called tools<br>
-&nbsp;&nbsp;then copy the arduinoIDEsketchBuildPath from the repository into this new "tools" folder.<br>
+&nbsp;&nbsp;then copy the folder sketchAsBuildPath from the repository into this new "tools" folder.<br>
 
 ### Alternative install
 
 * on windows / linux (into Arduino IDE install dir):<br>
-&nbsp;&nbsp;copy folder arduinoIDEsketchBuildPath to [Arduino IDE install location]/tools directory<br>
+&nbsp;&nbsp;copy folder sketchAsBuildPath to [Arduino IDE install location]/tools directory<br>
 &nbsp;&nbsp;ex: /Arduino-1.8.13/tools<br>
 
 * on mac (into Arduino IDE package):<br>
 &nbsp;&nbsp;In Applications right click and click on "Show Package Contents", then browse Contents -> Java -> tools<br>
-&nbsp;&nbsp;by holding the Option key(copy) drag folder arduinoIDEsketchBuildPath from the downloaded repository to the open tools folder above<br>
+&nbsp;&nbsp;by holding the Option key(copy) drag folder sketchAsBuildPath from the downloaded repository to the open tools folder above<br>
 &nbsp;&nbsp;select replace it you allready have an older version<br>
 
 Last restart Arduino IDE.
